@@ -1,0 +1,14 @@
+{
+  "compiler": "g++",
+  "cxx_standard": "17",
+  "build_type": "Release",
+  "definitions": {
+    "VERSION": "1.0.0",
+    "DEBUG_MODE": "ON",
+    "ENABLE_LOGGING": "true"
+  },
+  "compiler_flags": [
+    "-Wall",
+    "-Wextra"
+  ]
+}
