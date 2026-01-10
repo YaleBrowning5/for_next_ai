@@ -33,5 +33,15 @@ if(DEFINED ENABLE_LOGGING)
     message(STATUS "ENABLE_LOGGING defined as: ${ENABLE_LOGGING}")
 endif()
 
+# Create network discovery example executable
+add_executable(network_example network_example.cpp)
+
+# Link networking libraries
+if(WIN32)
+    target_link_libraries(network_example ws2_32)
+else()
+    target_link_libraries(network_example pthread)
+endif()
+
 # Add any additional compile definitions
 # These can be passed via -D flags to CMake
