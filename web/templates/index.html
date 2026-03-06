@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>猫咪喂食门控系统</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      color: #2d3748;
+    }
+    header {
+      background: #2b6cb0;
+      color: #fff;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.3rem; }
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #4a5568; text-transform: uppercase; letter-spacing: .05em; }
+    .badge {
+      display: inline-block;
+      padding: .25em .75em;
+      border-radius: 9999px;
+      font-size: .85rem;
+      font-weight: 600;
+    }
+    .badge-green { background: #c6f6d5; color: #22543d; }
+    .badge-blue  { background: #bee3f8; color: #2a4365; }
+    .badge-yellow{ background: #fefcbf; color: #744210; }
+    .badge-red   { background: #fed7d7; color: #742a2a; }
+    .badge-gray  { background: #e2e8f0; color: #4a5568; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: .4rem 0; border-bottom: 1px solid #f7fafc; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: #718096; font-size: .9rem; }
+    .stat-value { font-weight: 600; }
+    .btn {
+      display: inline-block;
+      padding: .55rem 1.25rem;
+      border: none;
+      border-radius: .5rem;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-open  { background: #48bb78; color: #fff; }
+    .btn-close { background: #fc8181; color: #fff; }
+    .btn-row { display: flex; gap: .75rem; margin-top: .75rem; }
+    #error-banner {
+      display: none;
+      background: #fed7d7;
+      color: #742a2a;
+      border-radius: .5rem;
+      padding: .75rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .fps-pill {
+      display: inline-block;
+      background: #ebf4ff;
+      color: #2c5282;
+      border-radius: 9999px;
+      padding: .15em .65em;
+      font-size: .78rem;
+      margin-left: .5rem;
+    }
+    ul.cat-list { list-style: none; margin-top: .5rem; }
+    ul.cat-list li { padding: .3rem 0; border-bottom: 1px solid #f7fafc; font-size: .9rem; }
+    ul.cat-list li:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <span style="font-size:1.8rem">🐱</span>
+    <h1>猫咪喂食门控系统</h1>
+    <span id="fps-badge" class="fps-pill">-- fps</span>
+  </header>
+
+  <div class="container">
+    <div id="error-banner"></div>
+
+    <div class="grid">
+
+      <!-- 门状态 -->
+      <div class="card">
+        <h2>门控状态</h2>
+        <div class="stat-row">
+          <span class="stat-label">FSM 状态</span>
+          <span id="door-state" class="badge badge-gray">加载中…</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">上次开门</span>
+          <span id="last-open" class="stat-value">--</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-open"  onclick="sendCmd('open')">🔓 手动开门</button>
+          <button class="btn btn-close" onclick="sendCmd('close')">🔒 手动关门</button>
+        </div>
+      </div>
+
+      <!-- 识别状态 -->
+      <div class="card">
+        <h2>识别状态</h2>
+        <div class="stat-row">
+          <span class="stat-label">检测到猫</span>
+          <span id="cat-detected" class="badge badge-gray">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">识别 ID</span>
+          <span id="cat-id" class="stat-value">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">相似度</span>
+          <span id="similarity" class="stat-value">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">帧计数</span>
+          <span id="frame-count" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <!-- 已注册的猫 -->
+      <div class="card">
+        <h2>已注册猫咪</h2>
+        <ul id="cat-list" class="cat-list">
+          <li style="color:#a0aec0">（暂无注册）</li>
+        </ul>
+      </div>
+
+      <!-- 系统错误 -->
+      <div class="card">
+        <h2>系统信息</h2>
+        <div class="stat-row">
+          <span class="stat-label">上次检测时间</span>
+          <span id="last-detection" class="stat-value">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">系统错误</span>
+          <span id="sys-error" class="stat-value" style="color:#e53e3e">--</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const STATE_COLORS = {
+      IDLE:       'badge-gray',
+      DETECTING:  'badge-yellow',
+      VERIFYING:  'badge-yellow',
+      OPENING:    'badge-blue',
+      OPEN:       'badge-green',
+      WAITING:    'badge-yellow',
+      CLOSING:    'badge-blue',
+    };
+
+    function fmtTs(ts) {
+      if (!ts) return '--';
+      const d = new Date(ts * 1000);
+      return d.toLocaleTimeString('zh-CN');
+    }
+
+    async function fetchStatus() {
+      try {
+        const r = await fetch('/api/status');
+        if (!r.ok) throw new Error(r.statusText);
+        const s = await r.json();
+
+        // FPS
+        document.getElementById('fps-badge').textContent = (s.fps || 0) + ' fps';
+
+        // Door state badge
+        const ds = document.getElementById('door-state');
+        ds.textContent = s.door_state || 'IDLE';
+        ds.className = 'badge ' + (STATE_COLORS[s.door_state] || 'badge-gray');
+
+        document.getElementById('last-open').textContent = fmtTs(s.last_open_ts);
+
+        // Detection
+        const detEl = document.getElementById('cat-detected');
+        if (s.cat_detected) {
+          detEl.textContent = '✅ 是';
+          detEl.className = 'badge badge-green';
+        } else {
+          detEl.textContent = '❌ 否';
+          detEl.className = 'badge badge-gray';
+        }
+        document.getElementById('cat-id').textContent = s.cat_id || '--';
+        document.getElementById('similarity').textContent =
+          s.similarity ? (s.similarity * 100).toFixed(1) + '%' : '--';
+        document.getElementById('frame-count').textContent = s.frame_count || 0;
+        document.getElementById('last-detection').textContent = fmtTs(s.last_detection_ts);
+
+        // Error
+        document.getElementById('sys-error').textContent = s.error || '--';
+
+        // Cat list
+        const catList = document.getElementById('cat-list');
+        if (s.registered_cats && s.registered_cats.length > 0) {
+          catList.innerHTML = s.registered_cats.map(c => `<li>🐈 ${c}</li>`).join('');
+        } else {
+          catList.innerHTML = '<li style="color:#a0aec0">（暂无注册）</li>';
+        }
+
+      } catch (e) {
+        console.error('Status fetch error:', e);
+      }
+    }
+
+    async function sendCmd(action) {
+      try {
+        const r = await fetch(`/api/door/${action}`, { method: 'POST' });
+        const data = await r.json();
+        if (!data.ok) {
+          const banner = document.getElementById('error-banner');
+          banner.textContent = '操作失败：' + (data.error || '未知错误');
+          banner.style.display = 'block';
+          setTimeout(() => { banner.style.display = 'none'; }, 4000);
+        }
+      } catch (e) {
+        console.error('Command error:', e);
+      }
+    }
+
+    // Poll every second
+    fetchStatus();
+    setInterval(fetchStatus, 1000);
+  </script>
+</body>
+</html>
